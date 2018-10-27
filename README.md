@@ -47,16 +47,45 @@ jl_fromJSON <- jsonlite::fromJSON
 library(rjson)
 rj_fromJSON <- rjson::fromJSON
 
+# Function to create a long json string, with structure similar to the 
+# example json string from the example above.
+create_json_str <- function(vals, size) {
+  out <- vapply(as.character(seq_len(size)), function(x) {
+    curr_val <- unlist(sample(vals, 1))
+    if (is.logical(curr_val)) {
+      return(paste(paste0('"', x, '"'), tolower(as.character(curr_val)), sep = ":"))
+    }
+    if (is.character(curr_val)) {
+      return(paste(paste0('"', x, '"'), paste0('"', curr_val, '"'), sep = ":"))
+    }
+    paste(paste0('"', x, '"'), curr_val, sep = ":")
+  }, character(1), USE.NAMES = FALSE)
+  
+  paste0("{", paste(out, collapse = ", "), "}")
+}
+
+vals <- list(8, 99.5, TRUE, "cats")
+json_str <- create_json_str(vals, 100000)
+```
+```r
+# Ensure the output of jsonparse::from_json() matches that of jsonlite::fromJSON()
+identical(jl_fromJSON(json_str), from_json(json_str))
+```
+```
+#> TRUE
+```
+```r
 microbenchmark::microbenchmark(
   jsonparse = from_json(json_str), 
   rjson = rj_fromJSON(json_str), 
-  jsonlite = jl_fromJSON(json_str)
+  jsonlite = jl_fromJSON(json_str), 
+  times = 50
 )
 ```
 ```
-Unit: microseconds
-     expr    min     lq     mean median      uq     max neval
-jsonparse  3.202  3.806  5.30057  4.558  5.7970  32.433   100
-    rjson  4.704  5.535  7.27236  7.257  7.8545  30.201   100
- jsonlite 60.706 63.274 73.61564 65.784 72.1105 423.252   100
+Unit: milliseconds
+      expr       min        lq      mean    median        uq       max neval
+ jsonparse  16.69483  18.53344  21.56793  19.87237  21.99968  47.27006    50
+     rjson  38.60249  41.15548  45.02022  44.41045  48.38988  56.59249    50
+  jsonlite 331.38482 343.32524 369.25288 358.70981 369.31804 486.69618    50
 ```
