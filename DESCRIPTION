@@ -1,0 +1,14 @@
+Package: jsonparse
+Title: Fast JSON Parser
+Version: 0.0.1.09000
+Authors@R: person("Chris", "Muir", email = "chrismuirrva@gmail.com", role = c("aut", "cre"))
+Description: Provides a function for very fast parsing of simple JSON objects.
+Depends: R (>= 3.0.0)
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: Rcpp
+LinkingTo: Rcpp, rapidjsonr
+URL: https://github.com/ChrisMuir/jsonparse
+BugReports: https://github.com/ChrisMuir/jsonparse/issues
+RoxygenNote: 6.1.0
