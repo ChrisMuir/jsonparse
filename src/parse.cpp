@@ -11,11 +11,21 @@ using namespace Rcpp;
 SEXP parse_array(rapidjson::Value::ConstArray& array) {
   int array_len = array.Size();
   int data_type = array[0].GetType();
+  if(data_type == 2) {
+    data_type = 1;
+  }
   bool list_out = false;
 
   // Check to see if the array has different data types, which means return
-  // will be a list.
+  // will be a list. Exception to this rule is for bool types...false has
+  // data type of 1, and true has data type of 2. So, effectively, data types
+  // 1 and 2 are identical (since they're both bool).
+  int curr_dtype;
   for(int i = 1; i < array_len; ++i) {
+    curr_dtype = array[i].GetType();
+    if(curr_dtype == 2) {
+      curr_dtype = 1;
+    }
     if(array[i].GetType() != data_type) {
       list_out = true;
       break;
@@ -31,7 +41,7 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
   switch(data_type) {
 
     // bool
-    case 2: {
+    case 1: {
       LogicalVector out(array_len);
       for(int i = 0; i < array_len; ++i) {
         out[i] = array[i].GetBool();
