@@ -11,5 +11,5 @@ from_json(json)
 input should be a character vector of length 1.}
 }
 \description{
-Takes a JSON string as input, returns a list of key-value pairs
+Takes a JSON string as input, returns an R list of key-value pairs
 }
