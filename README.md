@@ -38,7 +38,7 @@ json_str <- jsonify::to_json(
 json_str
 ```
 ```
-#> {"string_key":["Cats"],"int_key":[5],"double_key":[99.4],"bool_key":[true],"vector_key":[9,10,11,12],"list_key":[["dogs"],[55.3]]}
+#> {"string_key":["cats"],"int_key":[5],"double_key":[99.4],"bool_key":[true],"vector_key":[9,10,11,12],"list_key":[["dogs"],[55.3]]}
 
 ```
 ```r
@@ -46,7 +46,7 @@ jsonparse::from_json(json_str)
 ```
 ```
 #> $string_key
-#> [1] "Cats"
+#> [1] "cats"
 
 #> $int_key
 #> [1] 5
