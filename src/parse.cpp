@@ -6,6 +6,61 @@
 using namespace Rcpp;
 
 
+// Dump objects from a rapidjson array to an R list.
+List array_to_list(rapidjson::Value::ConstArray& array, int& array_len) {
+  List out(array_len);
+  for(int i = 0; i < array_len; ++i) {
+    switch(array[i].GetType()) {
+      // bool - false
+      case 1: {
+        out[i] = array[i].GetBool();
+        break;
+      }
+
+      // bool - true
+      case 2: {
+        out[i] = array[i].GetBool();
+        break;
+      }
+
+      // string
+      case 5: {
+        out[i] = array[i].GetString();
+        break;
+      }
+
+      // numeric
+      case 6: {
+        if(array[0].IsDouble()) {
+          // double
+          out[i] = array[i].GetDouble();
+        } else {
+          // int
+          out[i] = array[i].GetInt();
+        }
+        break;
+      }
+
+      // array
+      case 4: {
+        int curr_array_len = array[i].Size();
+        rapidjson::Value::ConstArray curr_array = array[i].GetArray();
+        out[i] = array_to_list(curr_array, curr_array_len);
+        break;
+      }
+
+      // some other data type not covered
+      default: {
+        stop("Uknown data type. Only able to parse int, double, string, bool");
+      }
+
+    }
+  }
+
+  return out;
+}
+
+
 // Parse an array object, return an SEXP that contains the objects from the
 // array.
 SEXP parse_array(rapidjson::Value::ConstArray& array) {
@@ -32,9 +87,10 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
     }
   }
 
-  // TODO: Add support for list vectors.
+  // If the values in the input array are not all of the same data type,
+  // return the array values as an R list.
   if(list_out) {
-    // Do stuff
+    return array_to_list(array, array_len);
   }
 
   // Get current value
@@ -75,6 +131,16 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
         }
         return out;
       }
+    }
+
+    // array
+    case 4: {
+      List out(array_len);
+      for(int i = 0; i < array_len; ++i) {
+        rapidjson::Value::ConstArray curr_array = array[i].GetArray();
+        out[i] = parse_array(curr_array);
+      }
+      return out;
     }
 
   }
@@ -140,6 +206,7 @@ List parse_value(rapidjson::Value& val) {
       }
     }
 
+    // Bump i
     i++;
   }
 
@@ -193,7 +260,7 @@ List parse_document(rapidjson::Document& doc) {
         break;
       }
 
-        // some other data type not covered
+      // some other data type not covered
       default: {
         stop("Uknown data type. Only able to parse int, double, string, bool");
       }

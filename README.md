@@ -25,11 +25,12 @@ library(jsonify)
 # Create json string, using package jsonify
 json_str <- jsonify::to_json(
   list(
-    "string_key" = "Cats", 
+    "string_key" = "cats", 
     "int_key" = 5L, 
     "double_key" = 99.4, 
     "bool_key" = TRUE, 
-    "vector_key" = c(9L, 10L, 11L, 12L)
+    "vector_key" = c(9L, 10L, 11L, 12L), 
+    "list_key" = list("dogs", 55.3)
   )
 )
 
@@ -37,7 +38,8 @@ json_str <- jsonify::to_json(
 json_str
 ```
 ```
-#> [1] "{\"string_key\":[\"Cats\"],\"int_key\":[5],\"double_key\":[99.4],\"bool_key\":[true],\"vector_key\":[9,10,11,12]}"
+#> {"string_key":["Cats"],"int_key":[5],"double_key":[99.4],"bool_key":[true],"vector_key":[9,10,11,12],"list_key":[["dogs"],[55.3]]}
+
 ```
 ```r
 jsonparse::from_json(json_str)
@@ -57,6 +59,13 @@ jsonparse::from_json(json_str)
 
 #> $vector_key
 #> [1]  9 10 11 12
+
+#> $list_key
+#> $list_key[[1]]
+#> [1] "dogs"
+
+#> $list_key[[2]]
+#> [1] 55.3
 ```
 
 ## Benchmarks
@@ -97,11 +106,12 @@ microbenchmark::microbenchmark(
 ```r
 json_str <- lapply(1:10000, function(x) {
   list(
-    "string_key" = "Cats", 
+    "string_key" = "cats", 
     "int_key" = 5L, 
     "double_key" = 99.4, 
     "bool_key" = TRUE, 
-    "vector_key" = c(9L, 10L, 11L, 12L)
+    "vector_key" = c(9L, 10L, 11L, 12L), 
+    "list_key" = list("dogs", 55.3)
   )
 })
 json_str <- jsonify::to_json(json_str)
@@ -114,8 +124,8 @@ microbenchmark::microbenchmark(
 ```
 ```
 #> Unit: milliseconds
-#>      expr      min       lq     mean   median       uq      max neval
-#> jsonparse 10.67509 11.50920 14.73693 12.64370 14.01555 105.5113   100
-#>     rjson 28.35868 31.80194 38.61254 34.84451 41.82969 149.4932   100
-#>  jsonlite 82.88986 86.76564 90.76374 90.10586 93.98836 111.0137   100
+#>      expr       min        lq      mean    median        uq      max neval
+#> jsonparse  15.64111  17.31473  22.00976  19.56679  22.38043 105.1796   100
+#>     rjson  39.75470  47.17560  57.10193  52.63964  60.26783 168.0407   100
+#>  jsonlite 106.23252 111.21012 118.63235 115.01797 119.71804 238.5919   100
 ```
