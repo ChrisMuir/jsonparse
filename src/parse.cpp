@@ -142,14 +142,13 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
       }
       return out;
     }
-
   }
 
   return R_NilValue;
 }
 
 
-List parse_value(rapidjson::Value& val) {
+List parse_value(const rapidjson::Value& val) {
   int json_len = val.Size();
   List out(json_len);
   CharacterVector names(json_len);
@@ -200,6 +199,12 @@ List parse_value(rapidjson::Value& val) {
         break;
       }
 
+      // json
+      case 3: {
+        out[i] = parse_value(itr->value);
+        break;
+      }
+
       // some other data type not covered
       default: {
         stop("Uknown data type. Only able to parse int, double, string, bool");
@@ -221,7 +226,7 @@ List parse_document(rapidjson::Document& doc) {
   CharacterVector names(json_len);
 
   int i = 0;
-  for (rapidjson::Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr) {
+  for(rapidjson::Value::ConstMemberIterator itr = doc.MemberBegin(); itr != doc.MemberEnd(); ++itr) {
 
     // Get current key
     names[i] = itr->name.GetString();
@@ -229,7 +234,13 @@ List parse_document(rapidjson::Document& doc) {
     // Get current value
     switch(itr->value.GetType()) {
 
-      // bool
+      // bool - false
+      case 1: {
+        out[i] = itr->value.GetBool();
+        break;
+      }
+
+      // bool - true
       case 2: {
         out[i] = itr->value.GetBool();
         break;
@@ -257,6 +268,13 @@ List parse_document(rapidjson::Document& doc) {
       case 4: {
         rapidjson::Value::ConstArray curr_array = itr->value.GetArray();
         out[i] = parse_array(curr_array);
+        break;
+      }
+
+      // json
+      case 3: {
+        const rapidjson::Value& temp_val = itr->value;
+        out[i] = parse_value(temp_val);
         break;
       }
 
@@ -301,13 +319,12 @@ List from_json(const char * json) {
 
   // Else if input is an array, pass each element of doc through parse_value(),
   // saving the results of each iteration in an Rcpp::List.
-  rapidjson::Value curr_val;
   int json_len = doc.Size();
   List out(json_len);
   CharacterVector names(json_len);
 
   for(int i = 0; i < json_len; ++i) {
-    curr_val = doc[i];
+    const rapidjson::Value& curr_val = doc[i];
     out[i] = parse_value(curr_val);
   }
 
