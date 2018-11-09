@@ -31,7 +31,7 @@ List array_to_list(rapidjson::Value::ConstArray& array, int& array_len) {
 
       // numeric
       case 6: {
-        if(array[0].IsDouble()) {
+        if(array[i].IsDouble()) {
           // double
           out[i] = array[i].GetDouble();
         } else {
