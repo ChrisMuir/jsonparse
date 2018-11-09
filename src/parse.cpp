@@ -321,13 +321,11 @@ List from_json(const char * json) {
   // saving the results of each iteration in an Rcpp::List.
   int json_len = doc.Size();
   List out(json_len);
-  CharacterVector names(json_len);
 
   for(int i = 0; i < json_len; ++i) {
     const rapidjson::Value& curr_val = doc[i];
     out[i] = parse_value(curr_val);
   }
 
-  out.attr("names") = names;
   return out;
 }
