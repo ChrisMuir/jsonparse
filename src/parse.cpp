@@ -64,12 +64,21 @@ List array_to_list(rapidjson::Value::ConstArray& array, int& array_len) {
 // Parse an array object, return an SEXP that contains the objects from the
 // array.
 SEXP parse_array(rapidjson::Value::ConstArray& array) {
+  bool list_out = false;
   int array_len = array.Size();
   int data_type = array[0].GetType();
+
   if(data_type == 2) {
     data_type = 1;
   }
-  bool list_out = false;
+
+  if(data_type == 6) {
+    if(array[0].IsDouble()) {
+      data_type = 8;
+    } else {
+      data_type = 9;
+    }
+  }
 
   // Check to see if the array has different data types, which means return
   // will be a list. Exception to this rule is for bool types...false has
@@ -80,6 +89,13 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
     curr_dtype = array[i].GetType();
     if(curr_dtype == 2) {
       curr_dtype = 1;
+    }
+    if(curr_dtype == 6) {
+      if(array[i].IsDouble()) {
+        curr_dtype = 8;
+      } else {
+        curr_dtype = 9;
+      }
     }
     if(curr_dtype != data_type) {
       list_out = true;
@@ -114,23 +130,22 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
       return out;
     }
 
-    // numeric
-    case 6: {
-      if(array[0].IsDouble()) {
-        // double
-        NumericVector out(array_len);
-        for(int i = 0; i < array_len; ++i) {
-          out[i] = array[i].GetDouble();
-        }
-        return out;
-      } else {
-        // int
-        IntegerVector out(array_len);
-        for(int i = 0; i < array_len; ++i) {
-          out[i] = array[i].GetInt();
-        }
-        return out;
+    // double
+    case 8: {
+      NumericVector out(array_len);
+      for(int i = 0; i < array_len; ++i) {
+        out[i] = array[i].GetDouble();
       }
+      return out;
+    }
+
+    // int
+    case 9: {
+      IntegerVector out(array_len);
+      for(int i = 0; i < array_len; ++i) {
+        out[i] = array[i].GetInt();
+      }
+      return out;
     }
 
     // array
