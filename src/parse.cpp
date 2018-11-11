@@ -6,53 +6,83 @@
 using namespace Rcpp;
 
 
+// Will iterate over an object and return IntegerVector indicating the data
+// type of each element. Compatible with these rapidjson objects: Document,
+// Array, Value.
+template<typename T>
+IntegerVector get_dtypes(T& doc) {
+  int doc_len = doc.Size();
+  IntegerVector out(doc_len);
+  int curr_dtype;
+  for(int i = 0; i < doc_len; ++i) {
+    curr_dtype = doc[i].GetType();
+    if(curr_dtype == 2) {
+      curr_dtype = 1;
+    }
+    if(curr_dtype == 6) {
+      if(doc[i].IsDouble()) {
+        curr_dtype = 8;
+      } else {
+        curr_dtype = 9;
+      }
+    }
+
+    out[i] = curr_dtype;
+  }
+
+  return out;
+}
+
+
 // Dump objects from a rapidjson array to an R list.
-List array_to_list(rapidjson::Value::ConstArray& array, int& array_len) {
+// Can handle both named and unnamed JSON objects.
+template<typename T>
+List array_to_list(T& array, int& array_len) {
   List out(array_len);
   for(int i = 0; i < array_len; ++i) {
     switch(array[i].GetType()) {
-      // bool - false
-      case 1: {
-        out[i] = array[i].GetBool();
-        break;
-      }
+    // bool - false
+    case 1: {
+      out[i] = array[i].GetBool();
+      break;
+    }
 
-      // bool - true
-      case 2: {
-        out[i] = array[i].GetBool();
-        break;
-      }
+    // bool - true
+    case 2: {
+      out[i] = array[i].GetBool();
+      break;
+    }
 
-      // string
-      case 5: {
-        out[i] = array[i].GetString();
-        break;
-      }
+    // string
+    case 5: {
+      out[i] = array[i].GetString();
+      break;
+    }
 
-      // numeric
-      case 6: {
-        if(array[i].IsDouble()) {
-          // double
-          out[i] = array[i].GetDouble();
-        } else {
-          // int
-          out[i] = array[i].GetInt();
-        }
-        break;
+    // numeric
+    case 6: {
+      if(array[i].IsDouble()) {
+        // double
+        out[i] = array[i].GetDouble();
+      } else {
+        // int
+        out[i] = array[i].GetInt();
       }
+      break;
+    }
 
-      // array
-      case 4: {
-        int curr_array_len = array[i].Size();
-        rapidjson::Value::ConstArray curr_array = array[i].GetArray();
-        out[i] = array_to_list(curr_array, curr_array_len);
-        break;
-      }
+    // array
+    case 4: {
+      int curr_array_len = array[i].Size();
+      T curr_array = array[i].GetArray();
+      out[i] = array_to_list<T>(curr_array, curr_array_len);
+      break;
+    }
 
-      // some other data type not covered
-      default: {
-        stop("Uknown data type. Only able to parse int, double, string, bool");
-      }
+    // some other data type not covered
+    default: {
+      stop("Uknown data type. Only able to parse int, double, string, bool");
+    }
 
     }
   }
@@ -63,7 +93,9 @@ List array_to_list(rapidjson::Value::ConstArray& array, int& array_len) {
 
 // Parse an array object, return an SEXP that contains the objects from the
 // array.
-SEXP parse_array(rapidjson::Value::ConstArray& array) {
+// Can handle both named and unnamed JSON objects.
+template<typename T>
+SEXP parse_array(T& array) {
   bool list_out = false;
   int array_len = array.Size();
   int data_type = array[0].GetType();
@@ -106,63 +138,64 @@ SEXP parse_array(rapidjson::Value::ConstArray& array) {
   // If the values in the input array are not all of the same data type,
   // return the array values as an R list.
   if(list_out) {
-    return array_to_list(array, array_len);
+    return array_to_list<T>(array, array_len);
   }
 
   // Get current value
   switch(data_type) {
 
-    // bool
-    case 1: {
-      LogicalVector out(array_len);
-      for(int i = 0; i < array_len; ++i) {
-        out[i] = array[i].GetBool();
-      }
-      return out;
+  // bool
+  case 1: {
+    LogicalVector out(array_len);
+    for(int i = 0; i < array_len; ++i) {
+      out[i] = array[i].GetBool();
     }
+    return out;
+  }
 
-    // string
-    case 5: {
-      CharacterVector out(array_len);
-      for(int i = 0; i < array_len; ++i) {
-        out[i] = array[i].GetString();
-      }
-      return out;
+  // string
+  case 5: {
+    CharacterVector out(array_len);
+    for(int i = 0; i < array_len; ++i) {
+      out[i] = array[i].GetString();
     }
+    return out;
+  }
 
-    // double
-    case 8: {
-      NumericVector out(array_len);
-      for(int i = 0; i < array_len; ++i) {
-        out[i] = array[i].GetDouble();
-      }
-      return out;
+  // double
+  case 8: {
+    NumericVector out(array_len);
+    for(int i = 0; i < array_len; ++i) {
+      out[i] = array[i].GetDouble();
     }
+    return out;
+  }
 
-    // int
-    case 9: {
-      IntegerVector out(array_len);
-      for(int i = 0; i < array_len; ++i) {
-        out[i] = array[i].GetInt();
-      }
-      return out;
+  // int
+  case 9: {
+    IntegerVector out(array_len);
+    for(int i = 0; i < array_len; ++i) {
+      out[i] = array[i].GetInt();
     }
+    return out;
+  }
 
-    // array
-    case 4: {
-      List out(array_len);
-      for(int i = 0; i < array_len; ++i) {
-        rapidjson::Value::ConstArray curr_array = array[i].GetArray();
-        out[i] = parse_array(curr_array);
-      }
-      return out;
+  // array
+  case 4: {
+    List out(array_len);
+    for(int i = 0; i < array_len; ++i) {
+      T curr_array = array[i].GetArray();
+      out[i] = parse_array<T>(curr_array);
     }
+    return out;
+  }
   }
 
   return R_NilValue;
 }
 
 
+// Parse rapidjson::Value object.
 List parse_value(const rapidjson::Value& val) {
   int json_len = val.Size();
   List out(json_len);
@@ -177,53 +210,53 @@ List parse_value(const rapidjson::Value& val) {
     // Get current value
     switch(itr->value.GetType()) {
 
-      // bool - false
-      case 1: {
-        out[i] = itr->value.GetBool();
-        break;
-      }
+    // bool - false
+    case 1: {
+      out[i] = itr->value.GetBool();
+      break;
+    }
 
-      // bool - true
-      case 2: {
-        out[i] = itr->value.GetBool();
-        break;
-      }
+    // bool - true
+    case 2: {
+      out[i] = itr->value.GetBool();
+      break;
+    }
 
-      // string
-      case 5: {
-        out[i] = itr->value.GetString();
-        break;
-      }
+    // string
+    case 5: {
+      out[i] = itr->value.GetString();
+      break;
+    }
 
-      // numeric
-      case 6: {
-        if(itr->value.IsDouble()) {
-          // double
-          out[i] = itr->value.GetDouble();
-        } else {
-          // int
-          out[i] = itr->value.GetInt();
-        }
-        break;
+    // numeric
+    case 6: {
+      if(itr->value.IsDouble()) {
+        // double
+        out[i] = itr->value.GetDouble();
+      } else {
+        // int
+        out[i] = itr->value.GetInt();
       }
+      break;
+    }
 
-      // array
-      case 4: {
-        rapidjson::Value::ConstArray curr_array = itr->value.GetArray();
-        out[i] = parse_array(curr_array);
-        break;
-      }
+    // array
+    case 4: {
+      rapidjson::Value::ConstArray curr_array = itr->value.GetArray();
+      out[i] = parse_array<rapidjson::Value::ConstArray>(curr_array);
+      break;
+    }
 
-      // json
-      case 3: {
-        out[i] = parse_value(itr->value);
-        break;
-      }
+    // json
+    case 3: {
+      out[i] = parse_value(itr->value);
+      break;
+    }
 
-      // some other data type not covered
-      default: {
-        stop("Uknown data type. Only able to parse int, double, string, bool");
-      }
+    // some other data type not covered
+    default: {
+      stop("Uknown data type. Only able to parse int, double, string, bool");
+    }
     }
 
     // Bump i
@@ -235,6 +268,7 @@ List parse_value(const rapidjson::Value& val) {
 }
 
 
+// Parse rapidjson::Document object.
 List parse_document(rapidjson::Document& doc) {
   int json_len = doc.Size();
   List out(json_len);
@@ -249,54 +283,54 @@ List parse_document(rapidjson::Document& doc) {
     // Get current value
     switch(itr->value.GetType()) {
 
-      // bool - false
-      case 1: {
-        out[i] = itr->value.GetBool();
-        break;
-      }
+    // bool - false
+    case 1: {
+      out[i] = itr->value.GetBool();
+      break;
+    }
 
-      // bool - true
-      case 2: {
-        out[i] = itr->value.GetBool();
-        break;
-      }
+    // bool - true
+    case 2: {
+      out[i] = itr->value.GetBool();
+      break;
+    }
 
-      // string
-      case 5: {
-        out[i] = itr->value.GetString();
-        break;
-      }
+    // string
+    case 5: {
+      out[i] = itr->value.GetString();
+      break;
+    }
 
-      // numeric
-      case 6: {
-        if(itr->value.IsDouble()) {
-          // double
-          out[i] = itr->value.GetDouble();
-        } else {
-          // int
-          out[i] = itr->value.GetInt();
-        }
-        break;
+    // numeric
+    case 6: {
+      if(itr->value.IsDouble()) {
+        // double
+        out[i] = itr->value.GetDouble();
+      } else {
+        // int
+        out[i] = itr->value.GetInt();
       }
+      break;
+    }
 
-      // array
-      case 4: {
-        rapidjson::Value::ConstArray curr_array = itr->value.GetArray();
-        out[i] = parse_array(curr_array);
-        break;
-      }
+    // array
+    case 4: {
+      rapidjson::Value::ConstArray curr_array = itr->value.GetArray();
+      out[i] = parse_array<rapidjson::Value::ConstArray>(curr_array);
+      break;
+    }
 
-      // json
-      case 3: {
-        const rapidjson::Value& temp_val = itr->value;
-        out[i] = parse_value(temp_val);
-        break;
-      }
+    // json
+    case 3: {
+      const rapidjson::Value& temp_val = itr->value;
+      out[i] = parse_value(temp_val);
+      break;
+    }
 
-      // some other data type not covered
-      default: {
-        stop("Uknown data type. Only able to parse int, double, string, bool");
-      }
+    // some other data type not covered
+    default: {
+      stop("Uknown data type. Only able to parse int, double, string, bool");
+    }
     }
 
     // Bump i
@@ -304,6 +338,121 @@ List parse_document(rapidjson::Document& doc) {
   }
 
   out.attr("names") = names;
+  return out;
+}
+
+
+// Parse rapidjson::Document object that contains unnamed JSON data of the
+// same data type. Returns an R vector.
+SEXP doc_to_vector(rapidjson::Document& doc, int& dtype) {
+  int doc_len = doc.Size();
+
+  // Get current value
+  switch(dtype) {
+
+  // bool
+  case 1: {
+    LogicalVector out(doc_len);
+    for(int i = 0; i < doc_len; ++i) {
+      out[i] = doc[i].GetBool();
+    }
+    return out;
+  }
+
+  // string
+  case 5: {
+    CharacterVector out(doc_len);
+    for(int i = 0; i < doc_len; ++i) {
+      out[i] = doc[i].GetString();
+    }
+    return out;
+  }
+
+  // double
+  case 8: {
+    NumericVector out(doc_len);
+    for(int i = 0; i < doc_len; ++i) {
+      out[i] = doc[i].GetDouble();
+    }
+    return out;
+  }
+
+  // int
+  case 9: {
+    IntegerVector out(doc_len);
+    for(int i = 0; i < doc_len; ++i) {
+      out[i] = doc[i].GetInt();
+    }
+    return out;
+  }
+  }
+
+  return R_NilValue;
+}
+
+
+// Parse rapidjson::Document object that contains unnamed JSON data that
+// contains a variety of data types. Returns an R list.
+List doc_to_list(rapidjson::Document& doc) {
+  int doc_len = doc.Size();
+  List out(doc_len);
+
+  for(int i = 0; i < doc_len; ++i) {
+
+    // Get current value
+    switch(doc[i].GetType()) {
+
+    // bool - false
+    case 1: {
+      out[i] = doc[i].GetBool();
+      break;
+    }
+
+    // bool - true
+    case 2: {
+      out[i] = doc[i].GetBool();
+      break;
+    }
+
+    // string
+    case 5: {
+      out[i] = doc[i].GetString();
+      break;
+    }
+
+    // numeric
+    case 6: {
+      if(doc[i].IsDouble()) {
+        // double
+        out[i] = doc[i].GetDouble();
+      } else {
+        // int
+        out[i] = doc[i].GetInt();
+      }
+      break;
+    }
+
+    // array
+    case 4: {
+      rapidjson::Value::Array curr_array = doc[i].GetArray();
+      out[i] = parse_array<rapidjson::Value::Array>(curr_array);
+      break;
+    }
+
+    // object (named json object).
+    case 3: {
+      const rapidjson::Value& temp_val = doc[i];
+      out[i] = parse_value(temp_val);
+      break;
+    }
+
+    // some other data type not covered
+    default: {
+      stop("Uknown data type. Only able to parse int, double, string, bool");
+    }
+    }
+  }
+
   return out;
 }
 
@@ -316,7 +465,7 @@ List parse_document(rapidjson::Document& doc) {
 //'  input should be a character vector of length 1.
 //' @export
 // [[Rcpp::export]]
-List from_json(const char * json) {
+SEXP from_json(const char * json) {
   rapidjson::Document doc;
   doc.Parse(json);
 
@@ -332,15 +481,20 @@ List from_json(const char * json) {
     return parse_document(doc);
   }
 
-  // Else if input is an array, pass each element of doc through parse_value(),
-  // saving the results of each iteration in an Rcpp::List.
-  int json_len = doc.Size();
-  List out(json_len);
+  // If input in an array, first check the data type of each value in the
+  // array.
+  IntegerVector dtypes = get_dtypes<rapidjson::Document>(doc);
+  IntegerVector u_dtypes = unique(dtypes);
 
-  for(int i = 0; i < json_len; ++i) {
-    const rapidjson::Value& curr_val = doc[i];
-    out[i] = parse_value(curr_val);
+  // If all of the data types are simple and of the same type
+  // (i.e. all strings, ints, double, or bool), then return a vector of values.
+  if(u_dtypes.size() == 1) {
+    int dt = u_dtypes[0];
+    if(dt == 1 || dt == 5 || dt == 8 || dt == 9) {
+      return doc_to_vector(doc, dt);
+    }
   }
 
-  return out;
+  // Otherwise, if there's a variety of data types, return a list of values.
+  return doc_to_list(doc);
 }

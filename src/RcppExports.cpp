@@ -6,7 +6,7 @@
 using namespace Rcpp;
 
 // from_json
-List from_json(const char * json);
+SEXP from_json(const char * json);
 RcppExport SEXP _jsonparse_from_json(SEXP jsonSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
