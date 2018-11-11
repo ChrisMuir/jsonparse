@@ -12,3 +12,5 @@ LinkingTo: Rcpp, rapidjsonr
 URL: https://github.com/ChrisMuir/jsonparse
 BugReports: https://github.com/ChrisMuir/jsonparse/issues
 RoxygenNote: 6.1.0
+Suggests: 
+    testthat
