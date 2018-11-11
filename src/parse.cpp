@@ -40,7 +40,9 @@ template<typename T>
 List array_to_list(T& array, int& array_len) {
   List out(array_len);
   for(int i = 0; i < array_len; ++i) {
+
     switch(array[i].GetType()) {
+
     // bool - false
     case 1: {
       out[i] = array[i].GetBool();
@@ -71,6 +73,12 @@ List array_to_list(T& array, int& array_len) {
       break;
     }
 
+    // null
+    case 0: {
+      out[i] = CharacterVector(NA_STRING);
+      break;
+    }
+
     // array
     case 4: {
       int curr_array_len = array[i].Size();
@@ -96,49 +104,29 @@ List array_to_list(T& array, int& array_len) {
 // Can handle both named and unnamed JSON objects.
 template<typename T>
 SEXP parse_array(T& array) {
-  bool list_out = false;
   int array_len = array.Size();
-  int data_type = array[0].GetType();
 
-  if(data_type == 2) {
-    data_type = 1;
-  }
+  // Check the data type of each value in the array.
+  IntegerVector dtypes = get_dtypes<T>(array);
+  IntegerVector u_dtypes = unique(dtypes).sort();
+  int data_type = u_dtypes[0];
 
-  if(data_type == 6) {
-    if(array[0].IsDouble()) {
-      data_type = 8;
-    } else {
-      data_type = 9;
-    }
-  }
-
-  // Check to see if the array has different data types, which means return
-  // will be a list. Exception to this rule is for bool types...false has
-  // data type of 1, and true has data type of 2. So, effectively, data types
-  // 1 and 2 are identical (since they're both bool).
-  int curr_dtype;
-  for(int i = 1; i < array_len; ++i) {
-    curr_dtype = array[i].GetType();
-    if(curr_dtype == 2) {
-      curr_dtype = 1;
-    }
-    if(curr_dtype == 6) {
-      if(array[i].IsDouble()) {
-        curr_dtype = 8;
-      } else {
-        curr_dtype = 9;
-      }
-    }
-    if(curr_dtype != data_type) {
-      list_out = true;
-      break;
-    }
-  }
-
-  // If the values in the input array are not all of the same data type,
-  // return the array values as an R list.
-  if(list_out) {
+  // If the group of unique data types is longer than two, or if it's length is
+  // two and 0 is NOT one of the two values (0 corresponds to null/NA), then
+  // pass the input array along to array_to_list().
+  if(u_dtypes.size() > 2) {
     return array_to_list<T>(array, array_len);
+  } else if(u_dtypes.size() == 2) {
+    if(u_dtypes[0] == 0) {
+      int dt1 = u_dtypes[1];
+      if(dt1 == 4) {
+        return array_to_list<T>(array, array_len);
+      } else {
+        data_type = dt1;
+      }
+    } else {
+      return array_to_list<T>(array, array_len);
+    }
   }
 
   // Get current value
@@ -148,7 +136,11 @@ SEXP parse_array(T& array) {
   case 1: {
     LogicalVector out(array_len);
     for(int i = 0; i < array_len; ++i) {
-      out[i] = array[i].GetBool();
+      if(array[i].GetType() == 0) {
+        out[i] = NA_LOGICAL;
+      } else {
+        out[i] = array[i].GetBool();
+      }
     }
     return out;
   }
@@ -157,7 +149,11 @@ SEXP parse_array(T& array) {
   case 5: {
     CharacterVector out(array_len);
     for(int i = 0; i < array_len; ++i) {
-      out[i] = array[i].GetString();
+      if(array[i].GetType() == 0) {
+        out[i] = NA_STRING;
+      } else {
+        out[i] = array[i].GetString();
+      }
     }
     return out;
   }
@@ -166,7 +162,11 @@ SEXP parse_array(T& array) {
   case 8: {
     NumericVector out(array_len);
     for(int i = 0; i < array_len; ++i) {
-      out[i] = array[i].GetDouble();
+      if(array[i].GetType() == 0) {
+        out[i] = NA_REAL;
+      } else {
+        out[i] = array[i].GetDouble();
+      }
     }
     return out;
   }
@@ -175,8 +175,18 @@ SEXP parse_array(T& array) {
   case 9: {
     IntegerVector out(array_len);
     for(int i = 0; i < array_len; ++i) {
-      out[i] = array[i].GetInt();
+      if(array[i].GetType() == 0) {
+        out[i] = NA_INTEGER;
+      } else {
+        out[i] = array[i].GetInt();
+      }
     }
+    return out;
+  }
+
+  // null
+  case 0: {
+    CharacterVector out(array_len, NA_STRING);
     return out;
   }
 
@@ -237,6 +247,12 @@ List parse_value(const rapidjson::Value& val) {
         // int
         out[i] = itr->value.GetInt();
       }
+      break;
+    }
+
+    // null
+    case 0: {
+      out[i] = CharacterVector(NA_STRING);
       break;
     }
 
@@ -313,6 +329,12 @@ List parse_document(rapidjson::Document& doc) {
       break;
     }
 
+    // null
+    case 0: {
+      out[i] = CharacterVector(NA_STRING);
+      break;
+    }
+
     // array
     case 4: {
       rapidjson::Value::ConstArray curr_array = itr->value.GetArray();
@@ -354,7 +376,11 @@ SEXP doc_to_vector(rapidjson::Document& doc, int& dtype) {
   case 1: {
     LogicalVector out(doc_len);
     for(int i = 0; i < doc_len; ++i) {
-      out[i] = doc[i].GetBool();
+      if(doc[i].GetType() == 0) {
+        out[i] = NA_LOGICAL;
+      } else {
+        out[i] = doc[i].GetBool();
+      }
     }
     return out;
   }
@@ -363,7 +389,11 @@ SEXP doc_to_vector(rapidjson::Document& doc, int& dtype) {
   case 5: {
     CharacterVector out(doc_len);
     for(int i = 0; i < doc_len; ++i) {
-      out[i] = doc[i].GetString();
+      if(doc[i].GetType() == 0) {
+        out[i] = NA_STRING;
+      } else {
+        out[i] = doc[i].GetString();
+      }
     }
     return out;
   }
@@ -372,7 +402,11 @@ SEXP doc_to_vector(rapidjson::Document& doc, int& dtype) {
   case 8: {
     NumericVector out(doc_len);
     for(int i = 0; i < doc_len; ++i) {
-      out[i] = doc[i].GetDouble();
+      if(doc[i].GetType() == 0) {
+        out[i] = NA_REAL;
+      } else {
+        out[i] = doc[i].GetDouble();
+      }
     }
     return out;
   }
@@ -381,8 +415,18 @@ SEXP doc_to_vector(rapidjson::Document& doc, int& dtype) {
   case 9: {
     IntegerVector out(doc_len);
     for(int i = 0; i < doc_len; ++i) {
-      out[i] = doc[i].GetInt();
+      if(doc[i].GetType() == 0) {
+        out[i] = NA_INTEGER;
+      } else {
+        out[i] = doc[i].GetInt();
+      }
     }
+    return out;
+  }
+
+  // null
+  case 0: {
+    CharacterVector out(doc_len, NA_STRING);
     return out;
   }
   }
@@ -429,6 +473,12 @@ List doc_to_list(rapidjson::Document& doc) {
         // int
         out[i] = doc[i].GetInt();
       }
+      break;
+    }
+
+    // null
+    case 0: {
+      out[i] = CharacterVector(NA_STRING);
       break;
     }
 
@@ -484,14 +534,21 @@ SEXP from_json(const char * json) {
   // If input in an array, first check the data type of each value in the
   // array.
   IntegerVector dtypes = get_dtypes<rapidjson::Document>(doc);
-  IntegerVector u_dtypes = unique(dtypes);
+  IntegerVector u_dtypes = unique(dtypes).sort();
 
   // If all of the data types are simple and of the same type
   // (i.e. all strings, ints, double, or bool), then return a vector of values.
   if(u_dtypes.size() == 1) {
     int dt = u_dtypes[0];
-    if(dt == 1 || dt == 5 || dt == 8 || dt == 9) {
+    if(dt == 0 || dt == 1 || dt == 5 || dt == 8 || dt == 9) {
       return doc_to_vector(doc, dt);
+    }
+  } else if(u_dtypes.size() == 2) {
+    if(u_dtypes[0] == 0) {
+      int dt1 = u_dtypes[1];
+      if(dt1 == 1 || dt1 == 5 || dt1 == 8 || dt1 == 9) {
+        return doc_to_vector(doc, dt1);
+      }
     }
   }
 
