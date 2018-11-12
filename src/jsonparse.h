@@ -10,4 +10,8 @@ using namespace Rcpp;
 
 List parse_value(const rapidjson::Value& val);
 
+namespace js_vars {
+  extern std::unordered_set<int> dtypes;
+}
+
 #endif
