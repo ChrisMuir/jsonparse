@@ -1,8 +1,5 @@
 #include <Rcpp.h>
-
-// [[Rcpp::depends(rapidjsonr)]]
-#include "rapidjson/document.h"
-
+#include "jsonparse.h"
 using namespace Rcpp;
 
 
@@ -111,12 +108,17 @@ SEXP parse_array(T& array) {
   IntegerVector u_dtypes = unique(dtypes).sort();
   int data_type = u_dtypes[0];
 
-  // If the group of unique data types is longer than two, or if it's length is
-  // two and 0 is NOT one of the two values (0 corresponds to null/NA), then
-  // pass the input array along to array_to_list().
+  // Pass input array along to func array_to_list() if either of these is true
+  // (which will return an R list):
+  // 1. Length of unique data types (u_dtypes) is greater than two.
+  // 2. Length of u_dtypes is two, and is NOT made up of 0 and a value that
+  //    corresponds to int, double, string, or bool (1, 5, 8, 9).
+  // If neither of these conditions is met, parse_array() will return an
+  // R vector.
   if(u_dtypes.size() > 2) {
     return array_to_list<T>(array, array_len);
-  } else if(u_dtypes.size() == 2) {
+  }
+  if(u_dtypes.size() == 2) {
     if(u_dtypes[0] == 0) {
       int dt1 = u_dtypes[1];
       if(dt1 == 4) {
@@ -188,6 +190,16 @@ SEXP parse_array(T& array) {
   case 0: {
     CharacterVector out(array_len, NA_STRING);
     return out;
+  }
+
+  // JSON object
+  case 3: {
+    List out(array_len);
+    for(int i = 0; i < array_len; ++i) {
+      const rapidjson::Value& curr_val = array[i];
+      out[i] = parse_value(curr_val);
+    }
+    return(out);
   }
 
   // array
@@ -263,7 +275,7 @@ List parse_value(const rapidjson::Value& val) {
       break;
     }
 
-    // json
+    // JSON object
     case 3: {
       out[i] = parse_value(itr->value);
       break;
@@ -342,7 +354,7 @@ List parse_document(rapidjson::Document& doc) {
       break;
     }
 
-    // json
+    // JSON object
     case 3: {
       const rapidjson::Value& temp_val = itr->value;
       out[i] = parse_value(temp_val);
@@ -489,7 +501,7 @@ List doc_to_list(rapidjson::Document& doc) {
       break;
     }
 
-    // object (named json object).
+    // JSON object
     case 3: {
       const rapidjson::Value& temp_val = doc[i];
       out[i] = parse_value(temp_val);
