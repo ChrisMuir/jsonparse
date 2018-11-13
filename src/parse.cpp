@@ -89,7 +89,7 @@ List array_to_list(T& array, int& array_len) {
 
     // null
     case 0: {
-      out[i] = CharacterVector(NA_STRING);
+      out[i] = R_NA_STR;
       break;
     }
 
@@ -288,7 +288,7 @@ List parse_value(const rapidjson::Value& val) {
 
     // null
     case 0: {
-      out[i] = CharacterVector(NA_STRING);
+      out[i] = R_NA_STR;
       break;
     }
 
@@ -367,7 +367,7 @@ List parse_document(rapidjson::Document& doc) {
 
     // null
     case 0: {
-      out[i] = CharacterVector(NA_STRING);
+      out[i] = R_NA_STR;
       break;
     }
 
@@ -514,7 +514,7 @@ List doc_to_list(rapidjson::Document& doc) {
 
     // null
     case 0: {
-      out[i] = CharacterVector(NA_STRING);
+      out[i] = R_NA_STR;
       break;
     }
 
