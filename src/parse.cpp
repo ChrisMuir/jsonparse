@@ -103,7 +103,7 @@ List array_to_list(T& array, int& array_len) {
 
     // some other data type not covered
     default: {
-      stop("Uknown data type. Only able to parse int, double, string, bool");
+      stop("Uknown data type. Only able to parse int, double, string, bool, and array");
     }
 
     }
@@ -307,7 +307,7 @@ List parse_value(const rapidjson::Value& val) {
 
     // some other data type not covered
     default: {
-      stop("Uknown data type. Only able to parse int, double, string, bool");
+      stop("Uknown data type. Only able to parse int, double, string, bool, array, and json");
     }
     }
 
@@ -387,7 +387,7 @@ List parse_document(rapidjson::Document& doc) {
 
     // some other data type not covered
     default: {
-      stop("Uknown data type. Only able to parse int, double, string, bool");
+      stop("Uknown data type. Only able to parse int, double, string, bool, array, and json");
     }
     }
 
@@ -534,7 +534,7 @@ List doc_to_list(rapidjson::Document& doc) {
 
     // some other data type not covered
     default: {
-      stop("Uknown data type. Only able to parse int, double, string, bool");
+      stop("Uknown data type. Only able to parse int, double, string, bool, array, and json");
     }
     }
   }
