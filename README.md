@@ -1,3 +1,7 @@
+## NOTE
+
+I'm currently working with the [SymbolixAU](https://github.com/SymbolixAU) team to add the code/functionality from this package into their CRAN package [jsonify](https://github.com/SymbolixAU/jsonify). If that all works out as planned, then all future development of this code will be happening in that repo.
+
 # jsonparse
 
 R package for parsing JSON. There are already a few R packages that parse JSON data ( [jsonlite](https://github.com/jeroen/jsonlite), [rjson](https://github.com/alexcb/rjson) ), the intent behind this one is to try to build a package that is faster than the existing options. This project is very young, currently the functions can only handle values of type `int`, `double`, `logical`, and `character`.
