@@ -132,8 +132,10 @@ SEXP parse_array(T& array) {
   }
 
   int data_type;
-  std::vector<int> dtype_vect(js_vars::dtypes.begin(), js_vars::dtypes.end());
-  if(dtype_vect.size() == 2) {
+  if(js_vars::dtypes.size() == 1) {
+    data_type = *js_vars::dtypes.begin();
+  } else {
+    std::vector<int> dtype_vect(js_vars::dtypes.begin(), js_vars::dtypes.end());
     // Check to see if 0 is in dtypes.
     if(js_vars::dtypes.find(0) != js_vars::dtypes.end()) {
       // If 0 is in dtypes and dtypes size is two, get the int in dtypes
@@ -150,9 +152,6 @@ SEXP parse_array(T& array) {
       // If dtype_vect size is 2 and 0 is not one of the values, return R list.
       return array_to_list<T>(array, array_len);
     }
-  } else {
-    // If dtype_vect size is only 1.
-    data_type = dtype_vect[0];
   }
 
   // Get current value
